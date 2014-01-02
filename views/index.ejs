@@ -1,0 +1,126 @@
+
+ <%- include header.ejs %>	
+
+      
+      	<div class="row">
+      		<div class="col-lg-10">
+		        <h1>Ditch the Spreadsheets</h1>
+		        <p>
+		        	When you send and recieve bitcoins, you may be liable for taxes due to price changes.  This is a simple tool 
+		        	to help users of the Bitcoin network figure out any gains or losses.
+		        </p>
+		        <p>To see your transactions, gains, and losses enter your public Bitcoin addresses below.</p>
+		    </div>
+
+		    <div class="col-lg-2">
+		        <h3 class="text-center">BTC Price</h3>
+		        <p class="text-center">$<%= price %></p>
+		    </div>
+
+    	</div>
+
+    	<div class="row">
+	        <div class="col-lg-6">
+
+		        <h2>Your Addresses</h2>		        
+		        <form method="post" action="/" >	
+		        	<div class="input-group">			      
+				      <input name="newAddress" type="text" class="form-control" placeholder="Ex: 167iUyrWZEtcofuY3byNgqjyJUm3z6qXkc">
+				      <span class="input-group-btn">
+				        <button id="add-address-button" class="btn btn-default" type="submit">Add</button>
+				      </span>				    
+			    	</div><!-- /input-group -->
+			    </form>
+			   	<ul id="address-list" class="list-group">
+				  	
+				  	<!-- iterate over the addresses the user has entered and add them to the list -->
+				  	<% for(var i=0; i<addresses.length; i++) {%>
+						<li class="list-group-item"><%= addresses[i] %></li>						
+					<% } %>
+				  
+				</ul>
+
+			</div>
+		</div>
+
+		<div class="row">
+	        <div class="col-lg-12">
+				<div class="panel panel-default">
+				  
+				  <div class="panel-heading">Transactions</div>
+
+				  <!-- Table -->
+				  <table class="table">
+				  	<tr>
+				  		<th>Date</th>
+				  		<th>Type</th>
+				  		<th>BTC Amount</th>
+				  		<th>BTC Price</th>
+				  		<th>USD Amount</th>
+				  		<th>Gain (Loss)</th>
+				  	</tr>				  	
+
+				  	<% for(var i = 0; i < transactions.length; i++) {%>
+				  		<tr>
+					  		<td> <%= transactions[i].date_str %></td>
+					  		<td> 
+					  			<% if(transactions[i].incoming){ %>
+					  			Incoming
+					  			<% } else { %>
+					  			Outgoing
+					  			<% }%>
+					  		</td>					  		
+					  		<td> <%= transactions[i].btc_amount %></td>
+					  		<td> <%= transactions[i].btc_price %></td>					  		
+					  		<td> <%= transactions[i].btc_price * transactions[i].btc_amount %></td>
+					  		<td>N/A</td>
+				  		</tr>
+				  	<% } %>
+
+
+				  </table>
+				</div>
+			</div>
+		</div>
+
+		<div class="row">
+	        <div class="col-lg-6">
+	          <div class="panel panel-default">
+
+		        <div class="panel-heading">Totals</div>
+
+				  <!-- Table -->
+				  <table class="table">
+				 
+				  	<tr>
+				  		<td>Total Recieved</td>
+				  		<td>3 BTC / $3,000</td>
+				  	</tr>
+
+				  	<tr>
+				  		<td>Total Sent</td>
+				  		<td>3 BTC / $1,500</td>
+				  	</tr>
+
+				  	<tr>
+				  		<td>2013 Short Term Gains (Loss)</td>
+				  		<td>.5 BTC / $500</td>
+				  	</tr>
+
+				  	<tr>
+				  		<td>2013 Long Term Gains (Loss)</td>
+				  		<td>0 BTC / $0</td>
+				  	</tr>
+
+				  	<tr>
+				  		<td>Current Addresses Value</td>
+				  		<td>2 BTC / $2,000.00</td>
+				  	</tr>
+
+				  </table>
+				</div>
+			</div>
+		</div>      
+    
+
+<%- include footer.ejs %>
