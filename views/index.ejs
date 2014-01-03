@@ -25,7 +25,7 @@
 		        <h2>Your Addresses</h2>		        
 		        <form method="post" action="/" >	
 		        	<div class="input-group">			      
-				      <input name="newAddress" type="text" class="form-control" placeholder="Ex: 167iUyrWZEtcofuY3byNgqjyJUm3z6qXkc">
+				      <input name="newAddress" type="text" class="form-control" placeholder="Ex: 177psxfR31NACwxCn8p81efs65ofueSTBf">
 				      <span class="input-group-btn">
 				        <button id="add-address-button" class="btn btn-default" type="submit">Add</button>
 				      </span>				    
@@ -71,8 +71,8 @@
 					  			<% }%>
 					  		</td>					  		
 					  		<td> <%= transactions[i].btc_amount %></td>
-					  		<td> <%= transactions[i].btc_price %></td>					  		
-					  		<td> <%= transactions[i].btc_price * transactions[i].btc_amount %></td>
+					  		<td> <%= transactions[i].btc_price_str %></td>					  		
+					  		<td> <%= formatMoney(transactions[i].btc_price * transactions[i].btc_amount) %></td>
 					  		<td>N/A</td>
 				  		</tr>
 				  	<% } %>

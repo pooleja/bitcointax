@@ -9,6 +9,11 @@ var blockchain = require("blockchain.wrapper");
 var bitcoinAddress = require("bitcoin-address");
 var moment = require('moment');
 var async = require('async');
+var accounting = require('accounting');
+
+var redis = require('redis');
+var client = redis.createClient(6379, '127.0.0.1');
+
 
 exports.index = function(req, res){
 	/*blockchain.getAddressInfo("167iUyrWZEtcofuY3byNgqjyJUm3z6qXkc", function(addressInfo, err){
@@ -17,6 +22,10 @@ exports.index = function(req, res){
 		else
 			res.render('index', { title: 'BitcoinTax', info: addressInfo });
 	});*/
+
+	res.locals.formatMoney = function(data){
+	  return accounting.formatMoney(data);
+	}
 
 	var params = { title: 'BitcoinTax'};
 
@@ -40,6 +49,28 @@ exports.index = function(req, res){
 	});	
   
 };
+
+function getAddressesFromSession(req){
+	
+	var addresses = [];	
+
+	if(req.session.addresses) {
+		for (var i=0; i < req.session.addresses.length; i++){			
+            addresses.push(req.session.addresses[i]);
+        }
+	}
+
+	if(req.body.newAddress){
+		if(bitcoinAddress.validate(req.body.newAddress))
+			addresses.push(req.body.newAddress);
+		else
+			req.flash('error', 'Invalid address entered: ' + req.body.newAddress);
+	}
+			
+	
+	req.session.addresses = addresses;
+
+}
 
 function getCurrentPrice(req, res, callback){
 
@@ -120,8 +151,9 @@ function getBlockChainInfo(address, callback){
 
 		    data.on('end', function() {
 		        var addressResponse = JSON.parse(body);
-		        var transactions = 	getTransactions(addressResponse);  		        
-	    		callback(null, transactions);
+		        getTransactions(addressResponse, function(transactions){
+		        	callback(null, transactions);
+		        });  		        	    		
 		    });
 		}).on('error', function(e) {
 		      console.log("Got error: ", e);
@@ -129,57 +161,85 @@ function getBlockChainInfo(address, callback){
 	});
 }
 
-function getTransactions(info){
+function getTransactions(info, callback){
 
-	var transactions = [];
-	for (var i=0; i < info.txs.length; i++){			
-        transactions.push(convertTransaction(info.txs[i], info.info.conversion));
-    }	
-
-    return transactions;
+	async.map(info.txs, convertTransaction, function(err, results){
+    	
+    	if(err)
+    		console.log("Got error: ", err);
+    	else{    		
+    		callback(results);
+    	}
+    		
+	});        
 }
 
-function convertTransaction(tx, conversionFactor){
-
-	var tempTransaction = {};
-	
+function convertTransaction(tx, callback){
+		
 	var incoming = true;
 	if(tx.result < 0)
 		incoming = false;
 
-	tempTransaction['date'] = new Date(tx.time * 1000);
-	tempTransaction['date_str'] = moment(tx.time * 1000).format("YYYY-MM-DD");
-	tempTransaction['incoming'] = incoming;
-	tempTransaction['btc_amount'] = tx.result / conversionFactor;
-	tempTransaction['btc_price'] = 1000;
+	var d = new Date(tx.time * 1000);
+	getPriceForDate(d, function(price){
 
-	return tempTransaction;
+		var tempTransaction = {};
+		tempTransaction['date'] = d;
+		tempTransaction['date_str'] = moment(tx.time * 1000).format("YYYY-MM-DD");
+		tempTransaction['incoming'] = incoming;
+		tempTransaction['btc_amount'] = tx.result / 10000000;
+		tempTransaction['btc_price'] = price;
+		tempTransaction['btc_price_str'] = accounting.formatMoney(price);
+
+		callback(null, tempTransaction);
+
+	});	
 }
 
-function getAddressesFromSession(req){
-	
-	var addresses = [];	
+function getPriceForDate(d, callback){
 
-	if(req.session.addresses) {
-		for (var i=0; i < req.session.addresses.length; i++){			
-            addresses.push(req.session.addresses[i]);
-        }
-	}
+	var hashId = "daily";
+	var dayId = moment(d).format("YYYY-MM-DD");
 
-	if(req.body.newAddress){
-		if(bitcoinAddress.validate(req.body.newAddress))
-			addresses.push(req.body.newAddress);
+
+	client.hget(hashId, dayId, function(err, value){
+		if(err)
+			console.log(err);
+
+		if(!value){
+			console.log('not found in Redis: ' + dayId);
+			getDailyPrices(dayId, callback);
+		}
 		else
-			req.flash('error', 'Invalid address entered: ' + req.body.newAddress);
-	}
-			
+			callback(value);
+	});
 	
-	req.session.addresses = addresses;
-
-	return addresses;
 }
 
-function getPriceForDate(d){
-	//http://www.quandl.com/api/v1/datasets/BCHAIN/MKPRU.json
-	return 1000;
+function getDailyPrices(dayId, callback){
+
+	http.get('http://www.quandl.com/api/v1/datasets/BCHAIN/MKPRU.json?auth_token=F343hstxmzpV5zjQqyLU', function(data) {
+		var body = '';
+
+	    data.on('data', function(chunk) {
+	        body += chunk;
+	    });
+
+	    data.on('end', function() {
+	        var pricesResponse = JSON.parse(body);
+
+	        for (var i=0; i < pricesResponse.data.length; i++){			        	
+	        	var dString = "" + pricesResponse.data[i][0];
+	        	var obj = {};
+	        	obj[dString] = pricesResponse.data[i][1];
+			    client.HMSET('daily', obj);
+			}
+	         		        
+    		getPriceForDate(dayId, callback);
+	    });
+	}).on('error', function(e) {
+	      console.log("Got error: ", e);
+	      callback(e);
+	});
+
 }
