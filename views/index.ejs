@@ -55,9 +55,9 @@
 				  		<th>Date</th>
 				  		<th>Type</th>
 				  		<th>BTC Amount</th>
-				  		<th>BTC Price</th>
-				  		<th>USD Amount</th>
-				  		<th>Gain/Loss</th>
+				  		<th class="text-right">BTC Price</th>
+				  		<th class="text-right">USD Amount</th>
+				  		<th class="text-right">Gain/Loss</th>
 				  	</tr>				  	
 
 				  	<% for(var i = 0; i < transactions.length; i++) {%>
@@ -70,10 +70,10 @@
 					  			Outgoing
 					  			<% }%>
 					  		</td>					  		
-					  		<td> <%= transactions[i].btc_amount %></td>
-					  		<td> <%= transactions[i].btc_price_str %></td>					  		
-					  		<td> <%= formatMoney(transactions[i].btc_price * transactions[i].btc_amount) %> </td>
-					  		<td> 
+					  		<td class="text-center"> <%= transactions[i].btc_amount %></td>
+					  		<td class="text-right"> <%= transactions[i].btc_price_str %></td>					  		
+					  		<td class="text-right"> <%= formatMoney(transactions[i].btc_price * transactions[i].btc_amount) %> </td>
+					  		<td class="text-right"> 
 					  			<% if (!transactions[i].incoming) { %>
 					  				<%= formatMoney(transactions[i].totalGains) %>
 					  			<% }%>
@@ -97,38 +97,38 @@
 				  <table class="table">
 				  	<tr>
 				  		<th>Title</th>
-				  		<th>USD</th>
-				  		<th>BTC Amount</th>				  	
+				  		<th class="text-center">USD</th>
+				  		<th class="text-right">BTC Amount</th>				  	
 				  	</tr>
 				 
 				  	<tr>
 				  		<td>Total Recieved</td>				  		
-				  		<td><%= formatMoney(totalRecievedUsd) %></td>
-				  		<td><%= totalRecieved %> BTC</td>
+				  		<td class="text-right"><%= formatMoney(totalRecievedUsd) %></td>
+				  		<td class="text-right"><%= totalRecieved.toFixed(4) %> BTC</td>
 				  	</tr>
 
 				  	<tr>
 				  		<td>Total Sent</td>				  		
-				  		<td><%= formatMoney(totalSentUsd) %></td>
-				  		<td><%= totalSent %> BTC</td>
+				  		<td class="text-right"><%= formatMoney(totalSentUsd) %></td>
+				  		<td class="text-right"><%= totalSent.toFixed(4) %> BTC</td>
 				  	</tr>
 
 				  	<tr>
 				  		<td>2013 Short Term Gains (Loss)</td>
-				  		<td><%= formatMoney(totalShortTermGains) %></td>
-				  		<td></td>
+				  		<td class="text-right"><%= formatMoney(totalShortTermGains) %></td>
+				  		<td class="text-right"></td>
 				  	</tr>
 
 				  	<tr>
 				  		<td>2013 Long Term Gains (Loss)</td>
-				  		<td><%= formatMoney(totalLongTermGains) %></td>
-				  		<td></td>
+				  		<td class="text-right"><%= formatMoney(totalLongTermGains) %></td>
+				  		<td class="text-right"></td>
 				  	</tr>
 
 				  	<tr>
 				  		<td>Current Addresses Value</td>
-				  		<td>$2,000.00</td>
-				  		<td>2 BTC</td>
+				  		<td class="text-right"><%= formatMoney(balanceUsd) %></td>
+				  		<td class="text-right"><%= balance.toFixed(4) %> BTC</td>
 				  	</tr>
 
 				  </table>

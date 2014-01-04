@@ -14,6 +14,8 @@ var accounting = require('accounting');
 var redis = require('redis');
 var client = redis.createClient(6379, '127.0.0.1');
 
+var conversion = 100000000;
+
 
 exports.index = function(req, res){
 	/*blockchain.getAddressInfo("167iUyrWZEtcofuY3byNgqjyJUm3z6qXkc", function(addressInfo, err){
@@ -54,6 +56,9 @@ exports.index = function(req, res){
     		params['totalRecievedUsd'] = req.session.totalRecievedUsd;
     		params['totalSent'] = req.session.totalSent;
     		params['totalSentUsd'] = req.session.totalSentUsd;
+
+    		params['balance'] = req.session.balance / conversion;
+    		params['balanceUsd'] = (req.session.balance / conversion) * req.session.price;
 
 			// Render the page with the data stored in params
 			res.render('index', params);			
@@ -240,6 +245,7 @@ function getAddressesInfo(req, res, callback){
 	else{
 
 		req.session.transactions = [];
+		req.session.balance = 0;
 
 		// Asynchronously call the API to get blockchain info
 		async.map(req.session.addresses, getBlockChainInfo, function(err, results){
@@ -247,10 +253,11 @@ function getAddressesInfo(req, res, callback){
 	    		console.log("Got error: ", err);
 	    	else{
 	    		for (var i=0; i < results.length; i++){			
-			        var addressTrx = results[i];
+			        var addressTrx = results[i].trxs;
 			        for (var j=0; j < addressTrx.length; j++){
 			        	req.session.transactions.push(addressTrx[j]);
 			        }
+			        req.session.balance += results[i].totalVal;
 			    }
 
 			    req.session.transactions.sort(compareTrx)
@@ -271,7 +278,7 @@ function compareTrx(a,b) {
 }
 
 
-function getBlockChainInfo(address, callback){	
+function getBlockChainInfo(address, callback){		
 
 	http.get('http://blockchain.info/multiaddr?active=' + address , function(data) {
 			var body = '';
@@ -283,7 +290,10 @@ function getBlockChainInfo(address, callback){
 		    data.on('end', function() {
 		        var addressResponse = JSON.parse(body);
 		        getTransactions(addressResponse, function(transactions){
-		        	callback(null, transactions);
+		        	var ret	= {};
+		        	ret['trxs'] = transactions;
+		        	ret['totalVal'] = addressResponse.addresses[0].final_balance;	        	
+		        	callback(null, ret);
 		        });  		        	    		
 		    });
 		}).on('error', function(e) {
@@ -318,7 +328,7 @@ function convertTransaction(tx, callback){
 		tempTransaction['date'] = d;
 		tempTransaction['date_str'] = moment(tx.time * 1000).format("YYYY-MM-DD");
 		tempTransaction['incoming'] = incoming;
-		tempTransaction['btc_amount'] = tx.result / 10000000;
+		tempTransaction['btc_amount'] = tx.result / conversion;
 		tempTransaction['btc_price'] = price;
 		tempTransaction['btc_price_str'] = accounting.formatMoney(price);
 
