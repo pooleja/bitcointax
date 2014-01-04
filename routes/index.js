@@ -196,13 +196,22 @@ function getAddressesFromSession(req){
         }
 	}
 
+	// Submitted from form when adding address
 	if(req.body.newAddress){
 		if(bitcoinAddress.validate(req.body.newAddress))
 			addresses.push(req.body.newAddress);
 		else
 			req.flash('error', 'Invalid address entered: ' + req.body.newAddress);
 	}
-			
+		
+	// Submitted from form when removing address	
+	if(req.body.removeAddress){
+		// Find and remove item from an array
+		var i = addresses.indexOf(req.body.removeAddress);
+		if(i != -1) {
+			addresses.splice(i, 1);
+		}
+	}
 	
 	req.session.addresses = addresses;
 

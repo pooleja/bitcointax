@@ -27,7 +27,7 @@
 		        	<div class="input-group">			      
 				      <input name="newAddress" type="text" class="form-control" placeholder="Ex: 177psxfR31NACwxCn8p81efs65ofueSTBf">
 				      <span class="input-group-btn">
-				        <button id="add-address-button" class="btn btn-default" type="submit">Add</button>
+				        <button class="btn btn-default" type="submit">Add</button>
 				      </span>				    
 			    	</div><!-- /input-group -->
 			    </form>
@@ -35,7 +35,15 @@
 				  	
 				  	<!-- iterate over the addresses the user has entered and add them to the list -->
 				  	<% for(var i=0; i<addresses.length; i++) {%>
-						<li class="list-group-item"><%= addresses[i] %></li>						
+						<li class="list-group-item">
+							<%= addresses[i] %>
+							<form method="post" action="/" class="pull-right">
+								<input type="hidden" name="removeAddress" value="<%= addresses[i] %>">
+								<button type="submit" class="btn btn-default btn-sm">
+								  <span class="glyphicon glyphicon-remove"></span>
+								</button>
+							</form>									
+						</li>						
 					<% } %>
 				  
 				</ul>
