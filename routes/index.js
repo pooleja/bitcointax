@@ -277,10 +277,9 @@ function compareTrx(a,b) {
   return 0;
 }
 
-
 function getBlockChainInfo(address, callback){		
 
-	http.get('http://blockchain.info/multiaddr?active=' + address , function(data) {
+	https.get('https://blockchain.info/address/' + address + '?format=json' , function(data) {
 			var body = '';
 
 		    data.on('data', function(chunk) {
@@ -289,12 +288,14 @@ function getBlockChainInfo(address, callback){
 
 		    data.on('end', function() {
 		        var addressResponse = JSON.parse(body);
+
 		        getTransactions(addressResponse, function(transactions){
 		        	var ret	= {};
 		        	ret['trxs'] = transactions;
-		        	ret['totalVal'] = addressResponse.addresses[0].final_balance;	        	
+		        	ret['totalVal'] = addressResponse.final_balance;	        	
 		        	callback(null, ret);
-		        });  		        	    		
+		        });
+
 		    });
 		}).on('error', function(e) {
 		      console.log("Got error: ", e);
@@ -303,6 +304,10 @@ function getBlockChainInfo(address, callback){
 }
 
 function getTransactions(info, callback){
+
+	for (var i=0; i < info.txs.length; i++){			
+        info.txs[i]['sourceAddress'] = info.address;
+    }
 
 	async.map(info.txs, convertTransaction, function(err, results){
     	
@@ -316,10 +321,6 @@ function getTransactions(info, callback){
 }
 
 function convertTransaction(tx, callback){
-		
-	var incoming = true;
-	if(tx.result < 0)
-		incoming = false;
 
 	var d = new Date(tx.time * 1000);
 	getPriceForDate(d, function(price){
@@ -327,10 +328,34 @@ function convertTransaction(tx, callback){
 		var tempTransaction = {};
 		tempTransaction['date'] = d;
 		tempTransaction['date_str'] = moment(tx.time * 1000).format("YYYY-MM-DD");
-		tempTransaction['incoming'] = incoming;
-		tempTransaction['btc_amount'] = tx.result / conversion;
 		tempTransaction['btc_price'] = price;
-		tempTransaction['btc_price_str'] = accounting.formatMoney(price);
+		tempTransaction['btc_price_str'] = accounting.formatMoney(price);				
+
+		var balance = 0;
+		// Iterate over inputs
+		for (var i=0; i < tx.inputs.length; i++){			
+	        var input = tx.inputs[i].prev_out;
+	        if(input.addr == tx.sourceAddress){	        		        		        
+	        	balance -= input.value;
+	        }
+	    }
+
+	    // Iterate over outputs
+		for (var i=0; i < tx.out.length; i++){			
+	        var output = tx.out[i];
+	        if(output.addr == tx.sourceAddress){	        	
+	        	balance += output.value;
+	        }
+	    }
+		
+		if(balance >= 0){			
+			tempTransaction['incoming'] = true;		
+		}else{			
+			tempTransaction['incoming'] = false;
+		}
+
+		tempTransaction['btc_amount'] = balance / conversion;
+		
 
 		callback(null, tempTransaction);
 
