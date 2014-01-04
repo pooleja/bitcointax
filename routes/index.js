@@ -37,11 +37,23 @@ exports.index = function(req, res){
 		// Next get the transaction info for the addresses
 		getAddressesInfo(req, res, function(req, res){
 
+			// Calculate Gains
+			calculateGains(req);
+
+
 			// Ensure the error messages are in the session
 			params["errors"] =  req.flash('error');
 			params['addresses'] = req.session.addresses;
 			params['transactions'] = req.session.transactions;
-			params['price'] = req.session.price;
+			params['price'] = req.session.price;		
+			params['totalShortTermGains'] = req.session.totalShortTermGains;
+    		params['totalLongTermGains'] = req.session.totalLongTermGains;
+    		params['totalGains'] = req.session.totalGains;
+
+    		params['totalRecieved'] = req.session.totalRecieved;
+    		params['totalRecievedUsd'] = req.session.totalRecievedUsd;
+    		params['totalSent'] = req.session.totalSent;
+    		params['totalSentUsd'] = req.session.totalSentUsd;
 
 			// Render the page with the data stored in params
 			res.render('index', params);			
@@ -49,6 +61,125 @@ exports.index = function(req, res){
 	});	
   
 };
+
+function calculateGains(req){
+	var trxs = req.session.transactions;
+
+	var trxSources = [];
+
+	var totalShortTermGains = 0;
+	var totalLongTermGains = 0;
+	var totalGains = 0;
+
+	var totalSent = 0;
+	var totalSentUsd = 0;
+	var totalRecieved = 0;
+	var totalRecievedUsd = 0;
+
+
+    // Iterate over the outgoing transactions and calculate the gains
+    for (var i=0; i < trxs.length; i++){
+        var tempTrx = trxs[i];                    
+        var btcAmount = 0;
+
+        if(tempTrx.incoming){
+        	btcAmount = tempTrx.btc_amount;
+        	totalRecieved += btcAmount;
+        	totalRecievedUsd += btcAmount * tempTrx.btc_price;
+
+	        var tempTrxSrc = {};
+	        tempTrxSrc['date'] = tempTrx.date;
+	        tempTrxSrc['available_amt'] = tempTrx.btc_amount;
+	        tempTrxSrc['btc_price'] = tempTrx.btc_price;
+	        trxSources.push(tempTrxSrc);
+
+	        console.log("Adding trx source: " + tempTrxSrc.date + " - " + tempTrxSrc.available_amt);
+    	} 
+        else{
+
+        	btcAmount = tempTrx.btc_amount * -1;
+        	totalSent += btcAmount;
+        	totalSentUsd += btcAmount * tempTrx.btc_price;
+
+        	console.log('Looking for transactions to make up ' + btcAmount);
+
+        	var currentValCount = 0;    
+        	var shortTermUsd = 0;
+        	var longTermUsd = 0;
+        	var totalUsd = 0;
+
+        	tempTrx['spent'] = [];
+
+	        for (var j=0; j < trxSources.length; j++){
+	        	var tmpSource = trxSources[j];
+
+	        	if((currentValCount < btcAmount) && (tmpSource.available_amt > 0)){
+	        		var spentTrx = {};	        		        	
+
+	        		if((currentValCount + tmpSource.available_amt) < btcAmount){	
+
+	        			console.log("Using all of transaction " + tmpSource.available_amt);
+
+	        			spentTrx['amount'] = tmpSource.available_amt;
+
+	        			currentValCount += tmpSource.available_amt;
+	        			tmpSource.available_amt = 0;
+	        		}else{	        			
+
+	        			console.log("Using some of the transaction " + tmpSource.available_amt);
+
+	        			spentTrx['amount'] = (btcAmount - currentValCount);
+
+	        			tmpSource.available_amt = tmpSource.available_amt - (btcAmount - currentValCount);
+	        			currentValCount = btcAmount;	        			
+	        		}
+
+	        		spentTrx['date'] = tmpSource.date;
+	        		spentTrx['usd_amount'] = spentTrx.amount * tmpSource.btc_price; 
+
+	        		tempTrx['spent'].push(spentTrx);
+
+	        		// calculate gains
+	        		var currentGains = (spentTrx.amount * tempTrx.btc_price) - spentTrx.usd_amount;
+
+	        		var sourceDate = moment(spentTrx.date);
+					var trasactionDate = moment(tempTrx.date);	
+
+					// Only calculate short/long term gains for transactions that happened in 2013
+					if(trasactionDate.year() == 2013){				
+						if(trasactionDate.diff(sourceDate, 'days') < 365){
+							shortTermUsd += currentGains;
+						}					
+						else{
+							longTermUsd += currentGains;
+						}
+					}
+
+					totalUsd += currentGains;
+	        	}
+	        }	       	 
+
+	  		tempTrx['shortTermGains'] = shortTermUsd;
+	  		tempTrx['longTermUsd'] = longTermUsd;
+	  		tempTrx['totalGains'] = totalUsd;
+
+	  		totalShortTermGains += shortTermUsd;
+	  		totalLongTermGains += longTermUsd;
+	  		totalGains += totalUsd;
+
+    	}
+    }
+
+    req.session.totalShortTermGains = totalShortTermGains;
+    req.session.totalLongTermGains = totalLongTermGains;
+    req.session.totalGains = totalGains;
+
+    req.session.totalRecieved = totalRecieved;
+    req.session.totalRecievedUsd = totalRecievedUsd;
+    req.session.totalSent = totalSent;
+    req.session.totalSentUsd = totalSentUsd;
+
+}
 
 function getAddressesFromSession(req){
 	

@@ -22,7 +22,7 @@
     	<div class="row">
 	        <div class="col-lg-6">
 
-		        <h2>Your Addresses</h2>		        
+		        <h2>Your Public Addresses</h2>		        
 		        <form method="post" action="/" >	
 		        	<div class="input-group">			      
 				      <input name="newAddress" type="text" class="form-control" placeholder="Ex: 177psxfR31NACwxCn8p81efs65ofueSTBf">
@@ -57,7 +57,7 @@
 				  		<th>BTC Amount</th>
 				  		<th>BTC Price</th>
 				  		<th>USD Amount</th>
-				  		<th>Gain (Loss)</th>
+				  		<th>Gain/Loss</th>
 				  	</tr>				  	
 
 				  	<% for(var i = 0; i < transactions.length; i++) {%>
@@ -72,8 +72,12 @@
 					  		</td>					  		
 					  		<td> <%= transactions[i].btc_amount %></td>
 					  		<td> <%= transactions[i].btc_price_str %></td>					  		
-					  		<td> <%= formatMoney(transactions[i].btc_price * transactions[i].btc_amount) %></td>
-					  		<td>N/A</td>
+					  		<td> <%= formatMoney(transactions[i].btc_price * transactions[i].btc_amount) %> </td>
+					  		<td> 
+					  			<% if (!transactions[i].incoming) { %>
+					  				<%= formatMoney(transactions[i].totalGains) %>
+					  			<% }%>
+					  		</td>
 				  		</tr>
 				  	<% } %>
 
@@ -84,37 +88,47 @@
 		</div>
 
 		<div class="row">
-	        <div class="col-lg-6">
+	        <div class="col-lg-12">
 	          <div class="panel panel-default">
 
 		        <div class="panel-heading">Totals</div>
 
 				  <!-- Table -->
 				  <table class="table">
+				  	<tr>
+				  		<th>Title</th>
+				  		<th>USD</th>
+				  		<th>BTC Amount</th>				  	
+				  	</tr>
 				 
 				  	<tr>
-				  		<td>Total Recieved</td>
-				  		<td>3 BTC / $3,000</td>
+				  		<td>Total Recieved</td>				  		
+				  		<td><%= formatMoney(totalRecievedUsd) %></td>
+				  		<td><%= totalRecieved %> BTC</td>
 				  	</tr>
 
 				  	<tr>
-				  		<td>Total Sent</td>
-				  		<td>3 BTC / $1,500</td>
+				  		<td>Total Sent</td>				  		
+				  		<td><%= formatMoney(totalSentUsd) %></td>
+				  		<td><%= totalSent %> BTC</td>
 				  	</tr>
 
 				  	<tr>
 				  		<td>2013 Short Term Gains (Loss)</td>
-				  		<td>.5 BTC / $500</td>
+				  		<td><%= formatMoney(totalShortTermGains) %></td>
+				  		<td></td>
 				  	</tr>
 
 				  	<tr>
 				  		<td>2013 Long Term Gains (Loss)</td>
-				  		<td>0 BTC / $0</td>
+				  		<td><%= formatMoney(totalLongTermGains) %></td>
+				  		<td></td>
 				  	</tr>
 
 				  	<tr>
 				  		<td>Current Addresses Value</td>
-				  		<td>2 BTC / $2,000.00</td>
+				  		<td>$2,000.00</td>
+				  		<td>2 BTC</td>
 				  	</tr>
 
 				  </table>
