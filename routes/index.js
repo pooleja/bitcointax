@@ -32,7 +32,7 @@ exports.index = function(req, res){
 	var params = { title: 'BitcoinTax'};
 
 	// First get the current price
-	getCurrentPrice(req, res, function(req, res){
+	getCurrentPrice(req, res, function(req, res, err){
 
 		getAddressesFromSession(req);
 
@@ -305,10 +305,13 @@ function getCurrentPrice(req, res, callback){
 		    coinRes.on('end', function() {
 		        var goxResponse = JSON.parse(body)		        
 		        req.session.price = goxResponse.amount;
-	    		callback(req, res);
+	    		callback(req, res, null);
 		    });
 		}).on('error', function(e) {
 		      console.log("Got error: ", e);
+		      req.flash('error', "Error getting current price from Coinbase.com");
+		      req.session.price = 0;
+		      callback(req, res, e);
 		});
 	}	
 
@@ -363,8 +366,10 @@ function getAddressesInfo(req, res, callback){
 	    if(addressesToLookup.length > 0){
 			// Asynchronously call the API to get blockchain info
 			async.map(addressesToLookup, getBlockChainInfo, function(err, results){
-		    	if(err)
+		    	if(err){
 		    		console.log("Got error: ", err);
+		    		req.flash('error', "Error address info from Coinbase.");
+		    	}
 		    	else{
 		    		for (var i=0; i < results.length; i++){			
 				        var addressTrx = results[i].trxs;
@@ -431,6 +436,7 @@ function getBlockChainInfo(address, callback){
 		    });
 		}).on('error', function(e) {
 		      console.log("Got error: ", e);
+		      req.flash('error', "Error address info from Blockchain.info.");
 		      callback(e);
 	});
 }
@@ -443,8 +449,10 @@ function getTransactions(info, callback){
 
 	async.map(info.txs, convertTransaction, function(err, results){
     	
-    	if(err)
+    	if(err){
     		console.log("Got error: ", err);
+    		req.flash('error', "Error converting transaction.");
+    	}
     	else{    		
     		callback(results);
     	}
@@ -495,8 +503,10 @@ function getPriceForDate(d, callback){
 
 
 	client.hget(hashId, dayId, function(err, value){
-		if(err)
+		if(err){
 			console.log(err);
+			req.flash('error', "Error retrieving data.");
+		}
 
 		if(!value){
 			console.log('not found in Redis: ' + dayId);
@@ -530,6 +540,7 @@ function getDailyPrices(dayId, callback){
     		getPriceForDate(dayId, callback);
 	    });
 	}).on('error', function(e) {
+		req.flash('error', "Error getting prices from Quandl.com.");
 	      console.log("Got error: ", e);
 	      callback(e);
 	});
