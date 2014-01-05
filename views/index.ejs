@@ -68,22 +68,22 @@
 				  		<th class="text-right">Gain/Loss</th>
 				  	</tr>				  	
 
-				  	<% for(var i = 0; i < transactions.length; i++) {%>
+				  	<% for(var i = 0; i < displayTransactions.length; i++) {%>
 				  		<tr>
-					  		<td> <%= transactions[i].date_str %></td>
+					  		<td> <%= displayTransactions[i].date_str %></td>
 					  		<td> 
-					  			<% if(transactions[i].incoming){ %>
+					  			<% if(displayTransactions[i].incoming){ %>
 					  			Incoming
 					  			<% } else { %>
 					  			Outgoing
 					  			<% }%>
 					  		</td>					  		
-					  		<td class="text-center"> <%= transactions[i].btc_amount %></td>
-					  		<td class="text-right"> <%= transactions[i].btc_price_str %></td>					  		
-					  		<td class="text-right"> <%= formatMoney(transactions[i].btc_price * transactions[i].btc_amount) %> </td>
+					  		<td class="text-center"> <%= displayTransactions[i].btc_amount %></td>
+					  		<td class="text-right"> <%= displayTransactions[i].btc_price_str %></td>					  		
+					  		<td class="text-right"> <%= formatMoney(displayTransactions[i].btc_price * displayTransactions[i].btc_amount) %> </td>
 					  		<td class="text-right"> 
-					  			<% if (!transactions[i].incoming) { %>
-					  				<%= formatMoney(transactions[i].totalGains) %>
+					  			<% if (!displayTransactions[i].incoming) { %>
+					  				<%= formatMoney(displayTransactions[i].totalGains) %>
 					  			<% }%>
 					  		</td>
 				  		</tr>

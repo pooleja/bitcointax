@@ -45,8 +45,7 @@ exports.index = function(req, res){
 
 			// Ensure the error messages are in the session
 			params["errors"] =  req.flash('error');
-			params['addresses'] = req.session.addresses;
-			params['transactions'] = req.session.transactions;
+			params['addresses'] = req.session.addresses;	
 			params['price'] = req.session.price;		
 			params['totalShortTermGains'] = req.session.totalShortTermGains;
     		params['totalLongTermGains'] = req.session.totalLongTermGains;
@@ -60,6 +59,8 @@ exports.index = function(req, res){
     		params['balance'] = req.session.balance / conversion;
     		params['balanceUsd'] = (req.session.balance / conversion) * req.session.price;
 
+    		params['displayTransactions'] = req.session.displayTransactions;
+
 			// Render the page with the data stored in params
 			res.render('index', params);			
 		});		
@@ -71,6 +72,7 @@ function calculateGains(req){
 	var trxs = req.session.transactions;
 
 	var trxSources = [];
+	var displayTransactions = [];
 
 	var totalShortTermGains = 0;
 	var totalLongTermGains = 0;
@@ -81,32 +83,83 @@ function calculateGains(req){
 	var totalRecieved = 0;
 	var totalRecievedUsd = 0;
 
+	var processedTransactions = [];
+
 
     // Iterate over the outgoing transactions and calculate the gains
     for (var i=0; i < trxs.length; i++){
-        var tempTrx = trxs[i];                    
-        var btcAmount = 0;
 
-        if(tempTrx.incoming){
-        	btcAmount = tempTrx.btc_amount;
-        	totalRecieved += btcAmount;
-        	totalRecievedUsd += btcAmount * tempTrx.btc_price;
+    	// verify that we have not already processes this transaction hash
+    	var found = false;
+    	for(var j=0; j < processedTransactions.length; j++){
+    		if(processedTransactions[j] == trxs[i].hash){
+    			found = true;
+    			break;
+    		}
+    	}
 
-	        var tempTrxSrc = {};
+    	// If we already processed the transaction then skip to the next
+    	if(found){
+    		console.log("Transaction was already processed: " + trxs[i].hash);
+    		continue;
+    	}
+    	
+    	processedTransactions.push(trxs[i].hash);
+
+    	// Iterate over the inputs/outputs and only calculate user addresses
+    	var inputsBalance = 0;
+    	var outputsBalance = 0;
+
+    	// Inputs
+    	for(var j=0; j < trxs[i].inputs.length; j++){
+    		var input = trxs[i].inputs[j];
+    		if(isUserAddress(input.addr, req)){
+    			inputsBalance += input.value;
+    		}
+    	}
+
+    	// Outputs
+    	for(var j=0; j < trxs[i].outputs.length; j++){
+    		var output = trxs[i].outputs[j];
+    		if(isUserAddress(output.addr, req)){
+    			outputsBalance += output.value;
+    		}
+    	}
+
+    	console.log("Transaction "+ trxs[i].hash + " has inputs of " + inputsBalance + " and outputs of " + outputsBalance);
+
+    	var tempTrx = trxs[i];
+
+    	// If the user outputs are greater than the user intputs then it is an incoming transaction
+    	if (outputsBalance > inputsBalance){
+    		var finalBalance =  (outputsBalance - inputsBalance) / conversion;
+
+        	totalRecieved += finalBalance;
+        	totalRecievedUsd += finalBalance * tempTrx.btc_price;
+
+    		var tempTrxSrc = {};
 	        tempTrxSrc['date'] = tempTrx.date;
-	        tempTrxSrc['available_amt'] = tempTrx.btc_amount;
+	        tempTrxSrc['available_amt'] = finalBalance;
 	        tempTrxSrc['btc_price'] = tempTrx.btc_price;
 	        trxSources.push(tempTrxSrc);
 
-	        console.log("Adding trx source: " + tempTrxSrc.date + " - " + tempTrxSrc.available_amt);
-    	} 
-        else{
+	        var displayTrx = {};
+	        displayTrx['date'] = tempTrx.date;
+	        displayTrx['date_str'] = tempTrx.date_str;
+	        displayTrx['btc_price'] = tempTrx.btc_price;
+	        displayTrx['btc_price_str'] = tempTrx.btc_price_str;
+	        displayTrx['incoming'] = true;
+	        displayTrx['btc_amount'] = finalBalance;
+	        displayTransactions.push(displayTrx);
 
-        	btcAmount = tempTrx.btc_amount * -1;
-        	totalSent += btcAmount;
-        	totalSentUsd += btcAmount * tempTrx.btc_price;
+    	} else if(inputsBalance > outputsBalance){
 
-        	console.log('Looking for transactions to make up ' + btcAmount);
+    		var finalBalance = (inputsBalance - outputsBalance) / conversion;
+
+    		totalSent += finalBalance;
+        	totalSentUsd += finalBalance * tempTrx.btc_price;
+
+        	console.log('Looking for transactions to make up ' + finalBalance);
 
         	var currentValCount = 0;    
         	var shortTermUsd = 0;
@@ -118,10 +171,11 @@ function calculateGains(req){
 	        for (var j=0; j < trxSources.length; j++){
 	        	var tmpSource = trxSources[j];
 
-	        	if((currentValCount < btcAmount) && (tmpSource.available_amt > 0)){
+	        	if((currentValCount < finalBalance) && (tmpSource.available_amt > 0)){
+	        		
 	        		var spentTrx = {};	        		        	
 
-	        		if((currentValCount + tmpSource.available_amt) < btcAmount){	
+	        		if((currentValCount + tmpSource.available_amt) < finalBalance){	
 
 	        			console.log("Using all of transaction " + tmpSource.available_amt);
 
@@ -133,10 +187,10 @@ function calculateGains(req){
 
 	        			console.log("Using some of the transaction " + tmpSource.available_amt);
 
-	        			spentTrx['amount'] = (btcAmount - currentValCount);
+	        			spentTrx['amount'] = (finalBalance - currentValCount);
 
-	        			tmpSource.available_amt = tmpSource.available_amt - (btcAmount - currentValCount);
-	        			currentValCount = btcAmount;	        			
+	        			tmpSource.available_amt = tmpSource.available_amt - (finalBalance - currentValCount);
+	        			currentValCount = finalBalance;	        			
 	        		}
 
 	        		spentTrx['date'] = tmpSource.date;
@@ -164,14 +218,22 @@ function calculateGains(req){
 	        	}
 	        }	       	 
 
-	  		tempTrx['shortTermGains'] = shortTermUsd;
-	  		tempTrx['longTermUsd'] = longTermUsd;
-	  		tempTrx['totalGains'] = totalUsd;
+	  		var displayTrx = {};
+	        displayTrx['date'] = tempTrx.date;
+	        displayTrx['date_str'] = tempTrx.date_str;
+	        displayTrx['btc_price'] = tempTrx.btc_price;
+	        displayTrx['btc_price_str'] = tempTrx.btc_price_str;
+	        displayTrx['incoming'] = false;
+	        displayTrx['btc_amount'] = finalBalance;
+	        displayTrx['shortTermGains'] = shortTermUsd;
+	  		displayTrx['longTermUsd'] = longTermUsd;
+	  		displayTrx['totalGains'] = totalUsd;
+	  		displayTrx['spent'] = tempTrx.spent;
+	        displayTransactions.push(displayTrx);
 
 	  		totalShortTermGains += shortTermUsd;
 	  		totalLongTermGains += longTermUsd;
-	  		totalGains += totalUsd;
-
+	  		totalGains += totalUsd;	
     	}
     }
 
@@ -184,6 +246,16 @@ function calculateGains(req){
     req.session.totalSent = totalSent;
     req.session.totalSentUsd = totalSentUsd;
 
+    req.session.displayTransactions = displayTransactions;   
+}
+
+function isUserAddress(address, req){
+	for (var i=0; i < req.session.addresses.length; i++){			
+        if(address == req.session.addresses[i])
+        	return true;
+    }
+
+    return false;
 }
 
 function getAddressesFromSession(req){
@@ -306,18 +378,7 @@ function getAddressesInfo(req, res, callback){
 				        req.session[results[i].address] = results[i];
 				    }
 
-				    console.log("sorting transactions of len: " + req.session.transactions.length);
-				    console.log("Before sort");
-				    for (var j=0; j < req.session.transactions.length; j++){
-			        	console.log(req.session.transactions[j]);
-			        }
 				    req.session.transactions.sort(compareTrx);
-
-				    console.log("After sort");
-				    for (var j=0; j < req.session.transactions.length; j++){
-			        	console.log(req.session.transactions[j]);
-			        }
-
 		    		callback(req, res);
 		    	}
 		    		
@@ -400,34 +461,28 @@ function convertTransaction(tx, callback){
 		tempTransaction['date'] = d;
 		tempTransaction['date_str'] = moment(tx.time * 1000).format("YYYY-MM-DD");
 		tempTransaction['btc_price'] = price;
-		tempTransaction['btc_price_str'] = accounting.formatMoney(price);				
+		tempTransaction['btc_price_str'] = accounting.formatMoney(price);
+		tempTransaction['hash'] = tx.hash;
 
-		var balance = 0;
+		var outputs = [];
+		var inputs = [];
+
 		// Iterate over inputs
 		for (var i=0; i < tx.inputs.length; i++){			
 	        var input = tx.inputs[i].prev_out;
-	        if(input.addr == tx.sourceAddress){	        		        		        
-	        	balance -= input.value;
-	        }
-	    }
+
+	        inputs.push(input);
+	    }	    
 
 	    // Iterate over outputs
-		for (var i=0; i < tx.out.length; i++){			
+		for (var i=0; i < tx.out.length; i++){
 	        var output = tx.out[i];
-	        if(output.addr == tx.sourceAddress){	        	
-	        	balance += output.value;
-	        }
-	    }
+	        outputs.push(output);
+	    }	    
+	
+		tempTransaction['outputs'] = outputs;
+		tempTransaction['inputs'] = inputs;
 		
-		if(balance >= 0){			
-			tempTransaction['incoming'] = true;		
-		}else{			
-			tempTransaction['incoming'] = false;
-		}
-
-		tempTransaction['btc_amount'] = balance / conversion;
-		
-
 		callback(null, tempTransaction);
 
 	});	
@@ -455,7 +510,7 @@ function getPriceForDate(d, callback){
 
 function getDailyPrices(dayId, callback){
 
-	http.get('http://www.quandl.com/api/v1/datasets/BCHAIN/MKPRU.json?auth_token=F343hstxmzpV5zjQqyLU', function(data) {
+	http.get('http://www.quandl.com/api/v1/datasets/BCHAIN/MKPRU.json', function(data) {
 		var body = '';
 
 	    data.on('data', function(chunk) {
