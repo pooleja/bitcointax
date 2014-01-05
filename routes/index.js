@@ -16,8 +16,6 @@ var client = redis.createClient(6379, '127.0.0.1');
 
 var conversion = 100000000;
 
-var currentPrice = 0;
-
 
 exports.index = function(req, res){
 	/*blockchain.getAddressInfo("167iUyrWZEtcofuY3byNgqjyJUm3z6qXkc", function(addressInfo, err){
@@ -308,7 +306,8 @@ function getCurrentPrice(req, res, callback){
 		        var goxResponse = JSON.parse(body)		        
 		        req.session.price = goxResponse.amount;
 	    		callback(req, res, null);
-	    		currentPrice = goxResponse.amount;
+	    		
+	    		client.set("current_price", goxResponse.amount);
 		    });
 		}).on('error', function(e) {
 		      console.log("Got error: ", e);
@@ -504,11 +503,22 @@ function getPriceForDate(d, callback){
 	var hashId = "daily";
 	var dayId = moment(d).format("YYYY-MM-DD");
 
-	// Use the current price if the day is today
-	if(moment(d).diff(moment(), 'days') < 1){
-		callback(currentPrice);
-	}else{	
+	var m = moment(d);
+	var mToday = moment();
+	if(mToday.diff(m, 'days') < 1){
 
+		console.log("Using today's price for transaction on " + m.format("YYYY-MM-DD") + " and today's date " + mToday.format("YYYY-MM-DD"));
+		client.get("current_price", function (err, reply) {
+	        if(err || !reply){
+	        	req.flash('error', "Error reading current price from db.");
+	        	callback(0);
+	        }
+
+	        callback(parseFloat(reply));
+	    });
+	    
+	}else{
+		// Use the current price if the day is today
 		client.hget(hashId, dayId, function(err, value){
 			if(err){
 				console.log(err);
@@ -523,6 +533,9 @@ function getPriceForDate(d, callback){
 				callback(value);
 		});
 	}
+
+	
+	
 }
 
 function getDailyPrices(dayId, callback){
