@@ -255,38 +255,98 @@ function getAddressesInfo(req, res, callback){
 
 		req.session.transactions = [];
 		req.session.balance = 0;
+		var addressesToLookup = [];
+		
+		// Iterate over the addresses and see if we hit any from the cache		
+		for (var i=0; i < req.session.addresses.length; i++){			
+	        var addr = req.session.addresses[i];
 
-		// Asynchronously call the API to get blockchain info
-		async.map(req.session.addresses, getBlockChainInfo, function(err, results){
-	    	if(err)
-	    		console.log("Got error: ", err);
-	    	else{
-	    		for (var i=0; i < results.length; i++){			
-			        var addressTrx = results[i].trxs;
+	        console.log("Looking for " + addr + " in the cache.");
+
+	        var obj = req.session[addr];
+	        if(obj){
+	        	var cacheDate = moment(obj.cacheDate);
+				var nowDate = moment();	
+			
+				// If the object was cached in the last 5 mins, use it
+				if(nowDate.diff(cacheDate, 'minutes') < 10){
+
+					console.log(addr + " was found in the cache from the last 5 minutes.");
+
+					var addressTrx = obj.trxs;
 			        for (var j=0; j < addressTrx.length; j++){
 			        	req.session.transactions.push(addressTrx[j]);
 			        }
-			        req.session.balance += results[i].totalVal;
-			    }
+			        req.session.balance += obj.totalVal;
 
-			    req.session.transactions.sort(compareTrx)
-	    		callback(req, res);
-	    	}
-	    		
-		});        
+			        // Continue in the loop so the lookup value doesn't get pushed
+					continue;
+				}			
+	        }
+
+	        console.log(addr + " was not found in the cache.");
+			addressesToLookup.push(addr);	        
+	    }
+
+	    if(addressesToLookup.length > 0){
+			// Asynchronously call the API to get blockchain info
+			async.map(addressesToLookup, getBlockChainInfo, function(err, results){
+		    	if(err)
+		    		console.log("Got error: ", err);
+		    	else{
+		    		for (var i=0; i < results.length; i++){			
+				        var addressTrx = results[i].trxs;
+				        for (var j=0; j < addressTrx.length; j++){
+				        	req.session.transactions.push(addressTrx[j]);
+				        }
+				        req.session.balance += results[i].totalVal;
+
+				        // Save it to the session cache
+				        results[i]['cacheDate'] = new Date();
+				        req.session[results[i].address] = results[i];
+				    }
+
+				    console.log("sorting transactions of len: " + req.session.transactions.length);
+				    console.log("Before sort");
+				    for (var j=0; j < req.session.transactions.length; j++){
+			        	console.log(req.session.transactions[j]);
+			        }
+				    req.session.transactions.sort(compareTrx);
+
+				    console.log("After sort");
+				    for (var j=0; j < req.session.transactions.length; j++){
+			        	console.log(req.session.transactions[j]);
+			        }
+
+		    		callback(req, res);
+		    	}
+		    		
+			});      
+		}  
+		else{
+
+			console.log("All addresses were found in the cache.");
+
+			req.session.transactions.sort(compareTrx);
+		    callback(req, res);
+		}
 					
 	}
 }
 
 function compareTrx(a,b) {
-  if (a.date < b.date)
-     return -1;
-  if (a.date > b.date)
-    return 1;
+	var firstDate = moment(a.date);
+	var secondDate = moment(b.date);
+  if (secondDate.isBefore(firstDate))
+     return 1;
+  if (firstDate.isBefore(secondDate))
+    return -1;
   return 0;
 }
 
 function getBlockChainInfo(address, callback){		
+
+	console.log("Getting " + address + " from the blockchain info API.");
 
 	https.get('https://blockchain.info/address/' + address + '?format=json' , function(data) {
 			var body = '';
@@ -301,7 +361,9 @@ function getBlockChainInfo(address, callback){
 		        getTransactions(addressResponse, function(transactions){
 		        	var ret	= {};
 		        	ret['trxs'] = transactions;
-		        	ret['totalVal'] = addressResponse.final_balance;	        	
+		        	ret['totalVal'] = addressResponse.final_balance;
+		        	ret['address'] = address;			        	
+
 		        	callback(null, ret);
 		        });
 
@@ -407,7 +469,7 @@ function getDailyPrices(dayId, callback){
 	        	var dString = "" + pricesResponse.data[i][0];
 	        	var obj = {};
 	        	obj[dString] = pricesResponse.data[i][1];
-			    client.HMSET('daily', obj);
+			    client.hmset('daily', obj);
 			}
 	         		        
     		getPriceForDate(dayId, callback);
