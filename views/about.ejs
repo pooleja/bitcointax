@@ -1,0 +1,59 @@
+<%- include header.ejs %>	
+      
+  	<div class="row">
+  		<div class="col-lg-10">
+	        <h1>About BitcoinTax.co</h1>
+	        <p>
+	        	The purpose of BitcoinTax.co is to help you understand tax implications for using the bitcoin network in the US.
+	        </p>
+	        
+	        <h2>Disclaimer</h2>
+	        <h3>General</h3>
+	        <p>
+	        	The information on this website should not be used in any actual transaction without the advice and guidance of a professional Tax Adviser who is familiar with all the relevant facts. 	        
+	        </p>
+	        <p>
+				Although the information contained here is presented in good faith and believed to be correct, it is general in nature and is not intended as tax advice. Furthermore, the information contained herein may not be applicable to or suitable for the individuals' specific circumstances or needs and may require consideration of other matters. 
+			</p>
+			<p>
+				BitcoinTax.co assumes no obligation to inform any person of any changes in the tax law or other factors that could affect the information contained herein. 
+			</p>
+
+			<h3>IRS Circular 230 Disclosure</h3>
+			<p>
+				Pursuant to the requirements of the Internal Revenue Service Circular 230, we inform you that, to the extent any advice relating to a Federal tax issue is contained in this communication, including in any attachments, it was not written or intended to be used, and cannot be used, for the purpose of (a) avoiding any tax related penalties that may be imposed on you or any other person under the Internal Revenue Code, or (b) promoting, marketing or recommending to another person any transaction or matter addressed in this communication.
+	        </p>
+
+	        <h2>How do I use the site?</h2>
+	        <p>
+	        	Enter all of your public addresses from your bitcoin wallets.  Each transaction to/from those addresses will be listed, including value in BTC at the time of the transaction.  This info can then be used to determine the gain/loss of the transaction.	        	
+	        </p>
+
+	        <h2>How is the current price calculated?</h2>
+	        <p>
+	        	The current price of BTC is calculated based on the value published by Coinbase.com.
+	        </p>
+
+	        <h2>How are historical prices calculated?</h2>
+	        <p>
+	        	Historical prices are sourced from Quandl.com and show the average price from each day.  That average price is used to determine how much each transaction was worth on that day.  This value can then be used in the cost basis.
+	        </p>
+
+	        <h2>How is the cost basis calculated?</h2>
+	        <p>
+	        	The cost basis of each outgoing transaction is calculated using the FIFO method.  The earliest Incoming transaction is used as the price for each Outgoing Transaction.
+
+	        	For example, if you bought 1 BTC on Jan 1, 2013 for $50.00 and then bought $200.00 worth of goods on Feb 1, 2013 for 1 BTC, your cost basis for that transaction would be $50.00 and you would have realized short term gains of $150.00.
+	        </p>
+
+	        <h2>How are short term and long term gains calculated?</h2>
+	        <p>
+	        	When there is an Outgoing transaction, you must determine the Incoming transactions that make up the cost basis.  If the previous Incoming transactions that make up the cost basis were over a year before the Outgoing transaction then it would be considered a long term gain/loss.  If the Incoming transactions were less than a year prior, it would be considered a short term gain/loss.
+	        </p>
+
+
+	    </div>
+
+	</div>
+
+<%- include footer.ejs %>

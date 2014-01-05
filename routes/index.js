@@ -29,7 +29,7 @@ exports.index = function(req, res){
 	  return accounting.formatMoney(data);
 	}
 
-	var params = { title: 'BitcoinTax'};
+	var params = { title: 'BitcoinTax', page: 'index'};
 
 	// First get the current price
 	getCurrentPrice(req, res, function(req, res, err){
