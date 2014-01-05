@@ -5,7 +5,6 @@
 
 var https = require('https');
 var http = require('http');
-var blockchain = require("blockchain.wrapper");
 var bitcoinAddress = require("bitcoin-address");
 var moment = require('moment');
 var async = require('async');
@@ -18,12 +17,6 @@ var conversion = 100000000;
 
 
 exports.index = function(req, res){
-	/*blockchain.getAddressInfo("167iUyrWZEtcofuY3byNgqjyJUm3z6qXkc", function(addressInfo, err){
-		if(err)
-			res.send(err);
-		else
-			res.render('index', { title: 'BitcoinTax', info: addressInfo });
-	});*/
 
 	res.locals.formatMoney = function(data){
 	  return accounting.formatMoney(data);
@@ -516,7 +509,7 @@ function getPriceForDate(d, callback){
 
 	        callback(parseFloat(reply));
 	    });
-	    
+
 	}else{
 		// Use the current price if the day is today
 		client.hget(hashId, dayId, function(err, value){
