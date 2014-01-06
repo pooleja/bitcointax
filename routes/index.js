@@ -505,7 +505,7 @@ function getPriceForDate(d, callback){
 
 	var m = moment(d);
 	var mToday = moment();
-	if(mToday.diff(m, 'days') < 1){
+	if(mToday.diff(m, 'days') < 1 || mToday.isBefore(m)){
 
 		console.log("Using today's price for transaction on " + m.format("YYYY-MM-DD") + " and today's date " + mToday.format("YYYY-MM-DD"));
 		client.get("current_price", function (err, reply) {
@@ -518,7 +518,7 @@ function getPriceForDate(d, callback){
 	    });
 
 	}else{
-		// Use the current price if the day is today
+
 		client.hget(hashId, dayId, function(err, value){
 			if(err){
 				console.log(err);
@@ -548,14 +548,24 @@ function getDailyPrices(dayId, callback){
 	    });
 
 	    data.on('end', function() {
-	        var pricesResponse = JSON.parse(body);
+
+	    	var oldestDate = moment().subtract('years', 1);
+	        var pricesResponse = JSON.parse(body);	    
 
 	        for (var i=0; i < pricesResponse.data.length; i++){			        	
+	        	
 	        	var dString = "" + pricesResponse.data[i][0];
 	        	var obj = {};
 	        	obj[dString] = pricesResponse.data[i][1];
 			    client.hmset('daily', obj);
+
+			    var currentDate = moment(dString);
+			    if(currentDate.isBefore(oldestDate))
+			    	oldestDate = currentDate;
 			}
+
+			// Ensure there are no missed days in the data
+			ensurePriceSetForDays(oldestDate, '0');
 	         		        
     		getPriceForDate(dayId, callback);
 	    });
@@ -566,3 +576,42 @@ function getDailyPrices(dayId, callback){
 	});
 
 }
+
+function ensurePriceSetForDays(dayId, lastPrice){
+	var currDate = moment(dayId);
+	var mToday = moment();
+
+	var hashId = "daily";
+	var dayId = moment(currDate).format("YYYY-MM-DD");
+
+	// For all the historical dates make sure it is set
+	if(mToday.diff(currDate, 'days') > 0){
+
+		client.hget(hashId, dayId, function(err, value){
+			if(err){
+				console.log(err);
+				req.flash('error', "Error retrieving data.");
+			}
+
+			if(!value){
+
+				value = lastPrice;
+
+				// The date was missing from the redis store, so try to add it with the last date found
+				var obj = {};
+				obj[dayId] = value;
+				client.hmset(hashId, obj);
+			}
+			
+			// Continue to the next date
+			ensurePriceSetForDays(currDate.add('days', 1), value);
+		});
+	}
+}
+
+
+
+
+
+
+
