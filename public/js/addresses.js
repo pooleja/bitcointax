@@ -1,5 +1,8 @@
 $( document ).ready(function() {
-  	setClickEvents();	  
+  	setClickEvents();	
+
+  	$("#copyright").text("Copyright © " + moment().format('YYYY') + " BitcoinTax.us");
+  	
 });
 
 function setClickEvents(){
