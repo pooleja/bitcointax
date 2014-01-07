@@ -13,6 +13,7 @@
     "moment": "~2.5.0",
     "async": "~0.2.9",
     "redis": "~0.10.0",
-    "accounting": "~0.3.2"
+    "accounting": "~0.3.2",
+    "nodetime": "~0.8.15"
   }
 }

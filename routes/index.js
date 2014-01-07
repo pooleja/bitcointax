@@ -540,7 +540,7 @@ function getPriceForDate(d, callback){
 
 function getDailyPrices(dayId, callback){
 
-	http.get('http://www.quandl.com/api/v1/datasets/BCHAIN/MKPRU.json?auth_token=dsahFHUiewjjd', function(data) {
+	http.get('http://www.quandl.com/api/v1/datasets/BCHAIN/MKPRU.json', function(data) {
 		var body = '';
 
 	    data.on('data', function(chunk) {
